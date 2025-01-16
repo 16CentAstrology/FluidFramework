@@ -6,10 +6,14 @@
 import { ICollection, IDocumentRepository } from "./database";
 import { IDocument } from "./document";
 
+/**
+ * @internal
+ */
 export class MongoDocumentRepository implements IDocumentRepository {
 	constructor(private readonly collection: ICollection<IDocument>) {}
 
-	async readOne(filter: any): Promise<IDocument> {
+	// eslint-disable-next-line @rushstack/no-new-null
+	async readOne(filter: any): Promise<IDocument | null> {
 		return this.collection.findOne(filter);
 	}
 
@@ -18,6 +22,10 @@ export class MongoDocumentRepository implements IDocumentRepository {
 		await (options?.upsert
 			? this.collection.upsert(filter, update, addToSet, options)
 			: this.collection.update(filter, update, addToSet, options));
+	}
+
+	async deleteOne(filter: any): Promise<any> {
+		return this.collection.deleteOne(filter);
 	}
 
 	async findOneOrCreate(
@@ -39,7 +47,7 @@ export class MongoDocumentRepository implements IDocumentRepository {
 	async create(document: IDocument): Promise<any> {
 		return this.collection.insertOne(document);
 	}
-	
+
 	async exists(filter: any): Promise<boolean> {
 		return this.collection.findOne(filter, { projection: { _id: 1 } }).then((doc) => !!doc);
 	}
