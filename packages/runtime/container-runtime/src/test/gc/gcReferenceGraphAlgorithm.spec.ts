@@ -3,8 +3,9 @@
  * Licensed under the MIT License.
  */
 
-import { strict as assert } from "assert";
-import { IGCResult, runGarbageCollection } from "../../gc";
+import { strict as assert } from "node:assert";
+
+import { IGCResult, runGarbageCollection } from "../../gc/index.js";
 
 interface IGCNode {
 	id: string;
