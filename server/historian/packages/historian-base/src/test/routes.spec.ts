@@ -3,7 +3,6 @@
  * Licensed under the MIT License.
  */
 
-import { AsyncLocalStorage } from "async_hooks";
 import assert from "assert";
 import express from "express";
 import * as sinon from "sinon";
@@ -13,13 +12,21 @@ import { TestThrottler } from "@fluidframework/server-test-utils";
 import { Lumberjack, TestEngine1 } from "@fluidframework/server-services-telemetry";
 import * as historianApp from "../app";
 import { RestGitService } from "../services";
-import { TestTenantService, TestCache } from "./utils";
+import { TestTenantService, TestCache, TestDocumentManager } from "./utils";
 import { Constants } from "../utils";
+import {
+	generateToken,
+	getAuthorizationTokenFromCredentials,
+} from "@fluidframework/server-services-client";
+import { ScopeType } from "@fluidframework/protocol-definitions";
+import { StartupCheck } from "@fluidframework/server-services-shared";
 
 const limit = 10;
 const sha = "testSha";
 const tenantId = "testTenantId";
-const testUrl = "http://test-historian.com";
+const documentId = "testDocumentId";
+const tenantKey = "testTenantKey";
+const testUrl = "http://localhost/historian";
 const defaultCache = new TestCache();
 const defaultProvider = new nconf.Provider({}).defaults({
 	auth: {
@@ -46,13 +53,28 @@ const sendRequestsTillThrottledWithAssertion = async (
 	url: string,
 	method: "get" | "post" | "patch" | "delete" = "get",
 ): Promise<void> => {
+	const sendReq = () =>
+		superTest[method](url).set(
+			"Authorization",
+			getAuthorizationTokenFromCredentials({
+				user: tenantId,
+				password: generateToken(tenantId, documentId, tenantKey, [
+					ScopeType.DocRead,
+					ScopeType.DocWrite,
+					ScopeType.SummaryWrite,
+				]),
+			}),
+		);
 	for (let i = 0; i < limit; i++) {
 		// we're not interested in making the requests succeed with 200s, so just assert that not 429
-		await superTest[method](url).expect((res) => {
+		await sendReq().expect((res) => {
 			assert.notStrictEqual(res.status, 429);
 		});
 	}
-	await superTest[method](url).expect(429);
+	await new Promise((resolve) => process.nextTick(resolve));
+	await sendReq().expect((res) => {
+		assert.strictEqual(res.status, 429);
+	});
 };
 
 describe("routes", () => {
@@ -94,15 +116,20 @@ describe("routes", () => {
 				const clusterThrottlers = new Map<string, TestThrottler>();
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
 
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -198,15 +225,20 @@ describe("routes", () => {
 				const clusterThrottlers = new Map<string, TestThrottler>();
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
 
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -316,15 +348,20 @@ describe("routes", () => {
 				const clusterThrottlers = new Map<string, TestThrottler>();
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
 
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -423,14 +460,20 @@ describe("routes", () => {
 				const clusterThrottlers = new Map<string, TestThrottler>();
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -492,14 +535,20 @@ describe("routes", () => {
 				const clusterThrottlers = new Map<string, TestThrottler>();
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -553,14 +602,20 @@ describe("routes", () => {
 				const clusterThrottlers = new Map<string, TestThrottler>();
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -613,14 +668,20 @@ describe("routes", () => {
 				const clusterThrottlers = new Map<string, TestThrottler>();
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -701,14 +762,19 @@ describe("routes", () => {
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
 
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -793,14 +859,19 @@ describe("routes", () => {
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
 
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -899,14 +970,19 @@ describe("routes", () => {
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
 
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -986,14 +1062,19 @@ describe("routes", () => {
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
 
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -1047,14 +1128,19 @@ describe("routes", () => {
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
 
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -1100,14 +1186,19 @@ describe("routes", () => {
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
 
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});
@@ -1156,14 +1247,19 @@ describe("routes", () => {
 				clusterThrottlers.set(Constants.createSummaryThrottleIdPrefix, clusterThrottler1);
 				clusterThrottlers.set(Constants.getSummaryThrottleIdPrefix, clusterThrottler2);
 
-				const asyncLocalStorage = new AsyncLocalStorage<string>();
+				const documentManager = new TestDocumentManager();
+				sinon.stub(documentManager, "readStaticProperties").returns(undefined);
+				const startupCheck = new StartupCheck();
+
 				app = historianApp.create(
 					defaultProvider,
 					defaultTenantService,
+					undefined,
 					tenantThrottlers,
 					clusterThrottlers,
+					documentManager,
+					startupCheck,
 					defaultCache,
-					asyncLocalStorage,
 				);
 				superTest = request(app);
 			});

@@ -3,60 +3,58 @@
  * Licensed under the MIT License.
  */
 
-export { GarbageCollector } from "./garbageCollection";
+export { GarbageCollector } from "./garbageCollection.js";
+export { computeTombstoneTimeout } from "./gcConfigs.js";
 export {
-	currentGCVersion,
+	nextGCVersion,
 	defaultInactiveTimeoutMs,
+	defaultSweepGracePeriodMs,
 	defaultSessionExpiryDurationMs,
-	disableSweepLogKey,
 	GCNodeType,
 	gcTestModeKey,
-	gcTombstoneGenerationOptionName,
-	gcSweepGenerationOptionName,
+	gcGenerationOptionName,
 	GCFeatureMatrix,
 	GCVersion,
-	gcVersionUpgradeToV3Key,
+	gcVersionUpgradeToV4Key,
 	IGarbageCollectionRuntime,
 	IGarbageCollector,
 	IGarbageCollectorConfigs,
 	IGarbageCollectorCreateParams,
 	IGCMetadata,
+	IGCMetadata_Deprecated,
+	IGCNodeUpdatedProps,
 	IGCResult,
 	IGCRuntimeOptions,
+	IMarkPhaseStats,
+	ISweepPhaseStats,
 	IGCStats,
 	oneDayMs,
-	runGCKey,
 	runSessionExpiryKey,
-	runSweepKey,
 	stableGCVersion,
-	sweepAttachmentBlobsKey,
-	sweepDatastoresKey,
-	throwOnTombstoneLoadKey,
-	throwOnTombstoneUsageKey,
 	UnreferencedState,
-} from "./gcDefinitions";
+	disableThrowOnTombstoneLoadKey,
+	GarbageCollectionMessage,
+	GarbageCollectionMessageType,
+	ISweepMessage,
+} from "./gcDefinitions.js";
 export {
 	cloneGCData,
 	concatGarbageCollectionStates,
-	getGCDataFromSnapshot,
-	getSnapshotDataFromOldSnapshotFormat,
-	sendGCUnexpectedUsageEvent,
-	shouldAllowGcTombstoneEnforcement,
-	shouldAllowGcSweep,
-	trimLeadingAndTrailingSlashes,
+	getGCVersionInEffect,
 	unpackChildNodesGCDetails,
-} from "./gcHelpers";
-export { runGarbageCollection } from "./gcReferenceGraphAlgorithm";
+	urlToGCNodePath,
+} from "./gcHelpers.js";
+export { runGarbageCollection } from "./gcReferenceGraphAlgorithm.js";
 export {
 	IGarbageCollectionNodeData,
 	IGarbageCollectionSnapshotData,
 	IGarbageCollectionState,
 	IGarbageCollectionSummaryDetailsLegacy,
-} from "./gcSummaryDefinitions";
-export { GCSummaryStateTracker, IGCSummaryTrackingData } from "./gcSummaryStateTracker";
+} from "./gcSummaryDefinitions.js";
 export {
-	skipClosureForXDaysKey,
-	closuresMapLocalStorageKey,
-	SweepReadyUsageDetectionHandler,
-} from "./gcSweepReadyUsageDetection";
-export { UnreferencedStateTracker } from "./gcUnreferencedStateTracker";
+	gcStateBlobKey,
+	GCSummaryStateTracker,
+	IGCSummaryTrackingData,
+} from "./gcSummaryStateTracker.js";
+export { GCTelemetryTracker } from "./gcTelemetry.js";
+export { UnreferencedStateTracker } from "./gcUnreferencedStateTracker.js";
